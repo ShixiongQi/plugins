@@ -378,9 +378,9 @@ func enableIPForward(family int) error {
 
 func cmdAdd(args *skel.CmdArgs) error {
 
-	logFileName := "/users/sqi009/cmdAdd_info.log"
-    logFile, _  := os.Create(logFileName)
-    defer logFile.Close()
+	logFileName := "/users/sqi009/bridge_cmdAdd_info.log"
+	logFile, _  := os.Create(logFileName)
+	defer logFile.Close()
 	debugLog := log.New(logFile,"[Info: bridge.go]",log.Lmicroseconds)
 	debugLog.Println("[bridge] cmdAdd start")
 
@@ -406,15 +406,15 @@ func cmdAdd(args *skel.CmdArgs) error {
 	if err != nil {
 		return err
 	}
-	debugLog.Println("[bridge] setupBridge finish")	
+	debugLog.Println("[bridge] setupBridge finish")
 
-	debugLog.Println("[bridge] GetNS start")	
+	debugLog.Println("[bridge] GetNS start")
 	netns, err := ns.GetNS(args.Netns)
 	if err != nil {
 		return fmt.Errorf("failed to open netns %q: %v", args.Netns, err)
 	}
 	defer netns.Close()
-	debugLog.Println("[bridge] GetNS finish")	
+	debugLog.Println("[bridge] GetNS finish")
 
 	debugLog.Println("[bridge] setupVeth start")
 	hostInterface, containerInterface, err := setupVeth(netns, br, args.IfName, n.MTU, n.HairpinMode, n.Vlan)
@@ -594,9 +594,9 @@ func cmdAdd(args *skel.CmdArgs) error {
 
 func cmdDel(args *skel.CmdArgs) error {
 
-	logFileName := "/users/sqi009/cmdDel_info.log"
-    logFile, _  := os.Create(logFileName)
-    defer logFile.Close()
+	logFileName := "/users/sqi009/bridge_cmdDel_info.log"
+	logFile, _  := os.Create(logFileName)
+	defer logFile.Close()
 	debugLog := log.New(logFile,"[Info: bridge.go]",log.Lmicroseconds)
 	debugLog.Println("[bridge] cmdDel start")
 

@@ -30,6 +30,9 @@ import (
 	"strconv"
 	"strings"
 
+	"log"
+	"os"
+
 	"github.com/containernetworking/cni/pkg/invoke"
 	"github.com/containernetworking/cni/pkg/skel"
 	"github.com/containernetworking/cni/pkg/types"
@@ -184,6 +187,13 @@ func isString(i interface{}) bool {
 }
 
 func cmdAdd(args *skel.CmdArgs) error {
+
+	logFileName := "/users/sqi009/flannel_cmdAdd_info.log"
+	logFile, _  := os.Create(logFileName)
+	defer logFile.Close()
+	debugLog := log.New(logFile,"[Info: flannel.go]",log.Lmicroseconds)
+	debugLog.Println("[flannel] cmdAdd start")
+
 	n, err := loadFlannelNetConf(args.StdinData)
 	if err != nil {
 		return err
@@ -211,11 +221,18 @@ func cmdAdd(args *skel.CmdArgs) error {
 	if n.RuntimeConfig != nil {
 		n.Delegate["runtimeConfig"] = n.RuntimeConfig
 	}
-
+	debugLog.Println("[flannel] cmdAdd finish")
 	return doCmdAdd(args, n, fenv)
 }
 
 func cmdDel(args *skel.CmdArgs) error {
+
+	logFileName := "/users/sqi009/flannel_cmdDel_info.log"
+	logFile, _  := os.Create(logFileName)
+	defer logFile.Close()
+	debugLog := log.New(logFile,"[Info: flannel.go]",log.Lmicroseconds)
+	debugLog.Println("[flannel] cmdDel start")
+
 	nc, err := loadFlannelNetConf(args.StdinData)
 	if err != nil {
 		return err
@@ -227,7 +244,7 @@ func cmdDel(args *skel.CmdArgs) error {
 		}
 		nc.Delegate["runtimeConfig"] = nc.RuntimeConfig
 	}
-
+	debugLog.Println("[flannel] cmdDel finish")
 	return doCmdDel(args, nc)
 }
 
