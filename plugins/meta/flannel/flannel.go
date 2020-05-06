@@ -31,7 +31,6 @@ import (
 	"strings"
 
 	"log"
-	"os"
 
 	"github.com/containernetworking/cni/pkg/invoke"
 	"github.com/containernetworking/cni/pkg/skel"
