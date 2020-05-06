@@ -24,6 +24,9 @@ import (
 	"syscall"
 	"time"
 
+	"log"
+	"os"
+
 	"github.com/j-keck/arping"
 	"github.com/vishvananda/netlink"
 
@@ -41,7 +44,7 @@ import (
 // For testcases to force an error after IPAM has been performed
 var debugPostIPAMError error
 
-const defaultBrName = "cni0"
+const defaultBrName = "QI0"
 
 type NetConf struct {
 	types.NetConf
@@ -374,6 +377,13 @@ func enableIPForward(family int) error {
 }
 
 func cmdAdd(args *skel.CmdArgs) error {
+
+	logFileName := "/users/sqi009/cmdAdd_info.log"
+    logFile, _  := os.Create(logFileName)
+    defer logFile.Close()
+	debugLog := log.New(logFile,"[Info: bridge.go]",log.Lmicroseconds)
+	debugLog.Println("[bridge] cmdAdd start")
+
 	var success bool = false
 
 	n, cniVersion, err := loadNetConf(args.StdinData)
@@ -391,25 +401,32 @@ func cmdAdd(args *skel.CmdArgs) error {
 		return fmt.Errorf("cannot set hairpin mode and promiscous mode at the same time.")
 	}
 
+	debugLog.Println("[bridge] setupBridge start")
 	br, brInterface, err := setupBridge(n)
 	if err != nil {
 		return err
 	}
+	debugLog.Println("[bridge] setupBridge finish")	
 
+	debugLog.Println("[bridge] GetNS start")	
 	netns, err := ns.GetNS(args.Netns)
 	if err != nil {
 		return fmt.Errorf("failed to open netns %q: %v", args.Netns, err)
 	}
 	defer netns.Close()
+	debugLog.Println("[bridge] GetNS finish")	
 
+	debugLog.Println("[bridge] setupVeth start")
 	hostInterface, containerInterface, err := setupVeth(netns, br, args.IfName, n.MTU, n.HairpinMode, n.Vlan)
 	if err != nil {
 		return err
 	}
+	debugLog.Println("[bridge] setupVeth finish")
 
 	// Assume L2 interface only
 	result := &current.Result{CNIVersion: cniVersion, Interfaces: []*current.Interface{brInterface, hostInterface, containerInterface}}
 
+	debugLog.Println("[bridge] IPAM start")
 	if isLayer3 {
 		// run the IPAM plugin and get back the config to apply
 		r, err := ipam.ExecAdd(n.IPAM.Type, args.StdinData)
@@ -465,7 +482,9 @@ func cmdAdd(args *skel.CmdArgs) error {
 		}); err != nil {
 			return err
 		}
+		debugLog.Println("[bridge] IPAM finish")
 
+		debugLog.Println("[bridge] Linkup start")
 		// check bridge port state
 		retries := []int{0, 50, 500, 1000, 1000}
 		for idx, sleep := range retries {
@@ -483,7 +502,7 @@ func cmdAdd(args *skel.CmdArgs) error {
 				return fmt.Errorf("bridge port in error state: %s", hostVeth.Attrs().OperState)
 			}
 		}
-
+		debugLog.Println("[bridge] Linkup finish")
 		// Send a gratuitous arp
 		if err := netns.Do(func(_ ns.NetNS) error {
 			contVeth, err := net.InterfaceByName(args.IfName)
@@ -569,11 +588,18 @@ func cmdAdd(args *skel.CmdArgs) error {
 	}
 
 	success = true
-
+	debugLog.Println("[bridge] cmdAdd finish")
 	return types.PrintResult(result, cniVersion)
 }
 
 func cmdDel(args *skel.CmdArgs) error {
+
+	logFileName := "/users/sqi009/cmdDel_info.log"
+    logFile, _  := os.Create(logFileName)
+    defer logFile.Close()
+	debugLog := log.New(logFile,"[Info: bridge.go]",log.Lmicroseconds)
+	debugLog.Println("[bridge] cmdDel start")
+
 	n, _, err := loadNetConf(args.StdinData)
 	if err != nil {
 		return err
@@ -581,16 +607,18 @@ func cmdDel(args *skel.CmdArgs) error {
 
 	isLayer3 := n.IPAM.Type != ""
 
+	debugLog.Println("[bridge] IPAMDel start")
 	if isLayer3 {
 		if err := ipam.ExecDel(n.IPAM.Type, args.StdinData); err != nil {
 			return err
 		}
 	}
-
+	debugLog.Println("[bridge] IPAMDel finish")
 	if args.Netns == "" {
 		return nil
 	}
 
+	debugLog.Println("[bridge] NSDel start")
 	// There is a netns so try to clean up. Delete can be called multiple times
 	// so don't return an error if the device is already removed.
 	// If the device isn't there then don't try to clean up IP masq either.
@@ -603,7 +631,7 @@ func cmdDel(args *skel.CmdArgs) error {
 		}
 		return err
 	})
-
+	debugLog.Println("[bridge] NSDel finish")
 	if err != nil {
 		return err
 	}
@@ -617,7 +645,7 @@ func cmdDel(args *skel.CmdArgs) error {
 			}
 		}
 	}
-
+	debugLog.Println("[bridge] cmdDel finish")
 	return err
 }
 

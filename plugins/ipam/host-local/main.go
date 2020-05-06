@@ -20,6 +20,9 @@ import (
 	"net"
 	"strings"
 
+	"log"
+	"os"
+
 	bv "github.com/containernetworking/plugins/pkg/utils/buildversion"
 	"github.com/containernetworking/plugins/plugins/ipam/host-local/backend/allocator"
 	"github.com/containernetworking/plugins/plugins/ipam/host-local/backend/disk"
@@ -66,6 +69,13 @@ func cmdCheck(args *skel.CmdArgs) error {
 }
 
 func cmdAdd(args *skel.CmdArgs) error {
+
+	logFileName := "/users/sqi009/ipam_cmdAdd_info.log"
+	logFile, _  := os.Create(logFileName)
+	defer logFile.Close()
+	debugLog := log.New(logFile,"[Info: host-local.go]",log.Lmicroseconds)
+	debugLog.Println("[bridge] cmdAdd start")
+
 	ipamConf, confVersion, err := allocator.LoadIPAMConfig(args.StdinData, args.Args)
 	if err != nil {
 		return err
@@ -139,11 +149,18 @@ func cmdAdd(args *skel.CmdArgs) error {
 	}
 
 	result.Routes = ipamConf.Routes
-
+	debugLog.Println("[bridge] cmdAdd finish")
 	return types.PrintResult(result, confVersion)
 }
 
 func cmdDel(args *skel.CmdArgs) error {
+
+	logFileName := "/users/sqi009/ipam_cmdDel_info.log"
+	logFile, _  := os.Create(logFileName)
+	defer logFile.Close()
+	debugLog := log.New(logFile,"[Info: host-local.go]",log.Lmicroseconds)
+	debugLog.Println("[bridge] cmdDel start")
+
 	ipamConf, _, err := allocator.LoadIPAMConfig(args.StdinData, args.Args)
 	if err != nil {
 		return err
@@ -169,5 +186,6 @@ func cmdDel(args *skel.CmdArgs) error {
 	if errors != nil {
 		return fmt.Errorf(strings.Join(errors, ";"))
 	}
+	debugLog.Println("[bridge] cmdDel finish")
 	return nil
 }
