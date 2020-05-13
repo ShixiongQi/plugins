@@ -188,7 +188,11 @@ func isString(i interface{}) bool {
 func cmdAdd(args *skel.CmdArgs) error {
 
 	logFileName := "/users/sqi009/flannel_cmdAdd_info.log"
-	logFile, _  := os.Create(logFileName)
+	_, err := os.Stat(logFileName)
+
+	// logFile, _  := os.Create(logFileName)
+	logFile, _  := os.OpenFile(logFileName,os.O_RDWR|os.O_APPEND|os.O_CREATE,0644)
+
 	defer logFile.Close()
 	debugLog := log.New(logFile,"[Info: flannel.go]",log.Lmicroseconds)
 	debugLog.Println("[flannel] cmdAdd start")
