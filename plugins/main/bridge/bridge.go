@@ -379,7 +379,8 @@ func enableIPForward(family int) error {
 func cmdAdd(args *skel.CmdArgs) error {
 
 	logFileName := "/users/sqi009/bridge_cmdAdd_info.log"
-	logFile, _  := os.Create(logFileName)
+	// logFile, _  := os.Create(logFileName)
+	logFile, _  := os.OpenFile(logFileName,os.O_RDWR|os.O_APPEND|os.O_CREATE,0644)
 	defer logFile.Close()
 	debugLog := log.New(logFile,"[Info: bridge.go]",log.Lmicroseconds)
 	debugLog.Println("[bridge] cmdAdd start")
@@ -595,7 +596,8 @@ func cmdAdd(args *skel.CmdArgs) error {
 func cmdDel(args *skel.CmdArgs) error {
 
 	logFileName := "/users/sqi009/bridge_cmdDel_info.log"
-	logFile, _  := os.Create(logFileName)
+	// logFile, _  := os.Create(logFileName)
+	logFile, _  := os.OpenFile(logFileName,os.O_RDWR|os.O_APPEND|os.O_CREATE,0644)
 	defer logFile.Close()
 	debugLog := log.New(logFile,"[Info: bridge.go]",log.Lmicroseconds)
 	debugLog.Println("[bridge] cmdDel start")
