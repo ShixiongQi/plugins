@@ -21,6 +21,8 @@ import (
 	"net"
 	"os"
 
+	"log"
+
 	"github.com/containernetworking/plugins/pkg/ns"
 	"github.com/containernetworking/plugins/pkg/utils/hwaddr"
 	"github.com/safchain/ethtool"
