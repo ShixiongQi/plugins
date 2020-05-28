@@ -187,26 +187,23 @@ func isString(i interface{}) bool {
 
 func cmdAdd(args *skel.CmdArgs) error {
 
-	logFileName := "/users/sqi009/flannel_cmdAdd_info.log"
-	_, err := os.Stat(logFileName)
-
-	// logFile, _  := os.Create(logFileName)
+	logFileName := "/users/sqi009/flannel-start-time.log"
 	logFile, _  := os.OpenFile(logFileName,os.O_RDWR|os.O_APPEND|os.O_CREATE,0644)
-
 	defer logFile.Close()
 	debugLog := log.New(logFile,"[Info: flannel.go]",log.Lmicroseconds)
 	debugLog.Println("[flannel] cmdAdd start")
-
+	debugLog.Println("[flannel] loadFlannelNetConf start")
 	n, err := loadFlannelNetConf(args.StdinData)
 	if err != nil {
 		return err
 	}
-
+	debugLog.Println("[flannel] loadFlannelSubnetEnv start")
 	fenv, err := loadFlannelSubnetEnv(n.SubnetFile)
 	if err != nil {
 		return err
 	}
-
+	debugLog.Println("[flannel] loadFlannelSubnetEnv fin")
+	debugLog.Println("[flannel] parse delegate plugin start")
 	if n.Delegate == nil {
 		n.Delegate = make(map[string]interface{})
 	} else {
@@ -225,6 +222,7 @@ func cmdAdd(args *skel.CmdArgs) error {
 		n.Delegate["runtimeConfig"] = n.RuntimeConfig
 	}
 	debugLog.Println("[flannel] cmdAdd finish")
+	debugLog.Println("[flannel] doCmdAdd start")
 	return doCmdAdd(args, n, fenv)
 }
 

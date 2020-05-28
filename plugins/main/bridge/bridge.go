@@ -287,12 +287,20 @@ func ensureVlanInterface(br *netlink.Bridge, vlanId int) (netlink.Link, error) {
 }
 
 func setupVeth(netns ns.NetNS, br *netlink.Bridge, ifName string, mtu int, hairpinMode bool, vlanID int) (*current.Interface, *current.Interface, error) {
+	logFileName := "/users/sqi009/flannel-start-time.log"
+	logFile, _  := os.OpenFile(logFileName,os.O_RDWR|os.O_APPEND|os.O_CREATE,0644)
+	defer logFile.Close()
+	debugLog := log.New(logFile,"[Info: bridge.go]",log.Lmicroseconds)
+	debugLog.Println("[bridge] setupVeth start")
+
 	contIface := &current.Interface{}
 	hostIface := &current.Interface{}
 
 	err := netns.Do(func(hostNS ns.NetNS) error {
 		// create the veth pair in the container and move host end into host netns
+		debugLog.Println("[bridge] ip.SetupVeth(ifName, mtu, hostNS) start")
 		hostVeth, containerVeth, err := ip.SetupVeth(ifName, mtu, hostNS)
+		debugLog.Println("[bridge] ip.SetupVeth(ifName, mtu, hostNS) fin")
 		if err != nil {
 			return err
 		}
@@ -307,23 +315,28 @@ func setupVeth(netns ns.NetNS, br *netlink.Bridge, ifName string, mtu int, hairp
 	}
 
 	// need to lookup hostVeth again as its index has changed during ns move
+	debugLog.Println("[bridge] netlink.LinkByName(hostIface.Name) start")
 	hostVeth, err := netlink.LinkByName(hostIface.Name)
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to lookup %q: %v", hostIface.Name, err)
 	}
+	debugLog.Println("[bridge] hostVeth.Attrs().HardwareAddr start")
 	hostIface.Mac = hostVeth.Attrs().HardwareAddr.String()
 
 	// connect host veth end to the bridge
+	debugLog.Println("[bridge] netlink.LinkSetMaster(hostVeth, br) start")
 	if err := netlink.LinkSetMaster(hostVeth, br); err != nil {
 		return nil, nil, fmt.Errorf("failed to connect %q to bridge %v: %v", hostVeth.Attrs().Name, br.Attrs().Name, err)
 	}
 
 	// set hairpin mode
+	debugLog.Println("[bridge] netlink.LinkSetHairpin(hostVeth, hairpinMode) start")
 	if err = netlink.LinkSetHairpin(hostVeth, hairpinMode); err != nil {
 		return nil, nil, fmt.Errorf("failed to setup hairpin mode for %v: %v", hostVeth.Attrs().Name, err)
 	}
 
 	if vlanID != 0 {
+		debugLog.Println("[bridge] etlink.BridgeVlanAdd start")
 		err = netlink.BridgeVlanAdd(hostVeth, uint16(vlanID), true, true, false, true)
 		if err != nil {
 			return nil, nil, fmt.Errorf("failed to setup vlan tag on interface %q: %v", hostIface.Name, err)
@@ -378,15 +391,14 @@ func enableIPForward(family int) error {
 
 func cmdAdd(args *skel.CmdArgs) error {
 
-	logFileName := "/users/sqi009/bridge_cmdAdd_info.log"
-	// logFile, _  := os.Create(logFileName)
+	logFileName := "/users/sqi009/flannel-start-time.log"
 	logFile, _  := os.OpenFile(logFileName,os.O_RDWR|os.O_APPEND|os.O_CREATE,0644)
 	defer logFile.Close()
 	debugLog := log.New(logFile,"[Info: bridge.go]",log.Lmicroseconds)
 	debugLog.Println("[bridge] cmdAdd start")
 
 	var success bool = false
-
+	debugLog.Println("[bridge] loadNetConf start")
 	n, cniVersion, err := loadNetConf(args.StdinData)
 	if err != nil {
 		return err
@@ -490,7 +502,7 @@ func cmdAdd(args *skel.CmdArgs) error {
 		retries := []int{0, 50, 500, 1000, 1000}
 		for idx, sleep := range retries {
 			time.Sleep(time.Duration(sleep) * time.Millisecond)
-
+			debugLog.Println("[bridge] netlink.LinkByName(hostInterface.Name) start")
 			hostVeth, err := netlink.LinkByName(hostInterface.Name)
 			if err != nil {
 				return err
@@ -510,12 +522,13 @@ func cmdAdd(args *skel.CmdArgs) error {
 			if err != nil {
 				return err
 			}
-
+			debugLog.Println("[bridge] GratuitousArpOverIface start")
 			for _, ipc := range result.IPs {
 				if ipc.Version == "4" {
 					_ = arping.GratuitousArpOverIface(ipc.Address.IP, *contVeth)
 				}
 			}
+			debugLog.Println("[bridge] GratuitousArpOverIface fin")
 			return nil
 		}); err != nil {
 			return err
@@ -575,6 +588,7 @@ func cmdAdd(args *skel.CmdArgs) error {
 
 	// Refetch the bridge since its MAC address may change when the first
 	// veth is added or after its IP address is set
+	debugLog.Println("[bridge] bridgeByName start")
 	br, err = bridgeByName(n.BrName)
 	if err != nil {
 		return err
