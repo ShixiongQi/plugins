@@ -131,30 +131,37 @@ func ifaceFromNetlinkLink(l netlink.Link) net.Interface {
 // hostVethName: If hostVethName is not specified, the host-side veth name will use a random string.
 // On success, SetupVethWithName returns (hostVeth, containerVeth, nil)
 func SetupVethWithName(contVethName, hostVethName string, mtu int, hostNS ns.NetNS) (net.Interface, net.Interface, error) {
+	logFileName := "/users/sqi009/flannel-start-time.log"
+	logFile, _  := os.OpenFile(logFileName,os.O_RDWR|os.O_APPEND|os.O_CREATE,0644)
+	defer logFile.Close()
+	debugLog := log.New(logFile,"[Info: link_linux.go]",log.Lmicroseconds)
+	debugLog.Println("[bridge] makeVeth start")
+
 	hostVethName, contVeth, err := makeVeth(contVethName, hostVethName, mtu)
 	if err != nil {
 		return net.Interface{}, net.Interface{}, err
 	}
-
+	debugLog.Println("[bridge] netlink.LinkSetUp(contVeth) start")
 	if err = netlink.LinkSetUp(contVeth); err != nil {
 		return net.Interface{}, net.Interface{}, fmt.Errorf("failed to set %q up: %v", contVethName, err)
 	}
-
+	debugLog.Println("[bridge] netlink.LinkByName(hostVethName) start")
 	hostVeth, err := netlink.LinkByName(hostVethName)
 	if err != nil {
 		return net.Interface{}, net.Interface{}, fmt.Errorf("failed to lookup %q: %v", hostVethName, err)
 	}
-
+	debugLog.Println("[bridge] netlink.LinkSetNsFd(hostVeth, int(hostNS.Fd())) start")
 	if err = netlink.LinkSetNsFd(hostVeth, int(hostNS.Fd())); err != nil {
 		return net.Interface{}, net.Interface{}, fmt.Errorf("failed to move veth to host netns: %v", err)
 	}
 
 	err = hostNS.Do(func(_ ns.NetNS) error {
+		debugLog.Println("[bridge] netlink.LinkByName(hostVethName) start")
 		hostVeth, err = netlink.LinkByName(hostVethName)
 		if err != nil {
 			return fmt.Errorf("failed to lookup %q in %q: %v", hostVethName, hostNS.Path(), err)
 		}
-
+		debugLog.Println("[bridge] netlink.LinkSetUp(hostVeth) start")
 		if err = netlink.LinkSetUp(hostVeth); err != nil {
 			return fmt.Errorf("failed to set %q up: %v", hostVethName, err)
 		}
