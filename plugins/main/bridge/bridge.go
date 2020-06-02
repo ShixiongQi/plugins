@@ -421,7 +421,7 @@ func cmdAdd(args *skel.CmdArgs) error {
 	}
 	debugLog.Println("[bridge] setupBridge finish")
 
-	debugLog.Println("[bridge] GetNS start")
+	debugLog.Println("[bridge] GetNS %q start", args.Netns)
 	netns, err := ns.GetNS(args.Netns)
 	if err != nil {
 		return fmt.Errorf("failed to open netns %q: %v", args.Netns, err)
